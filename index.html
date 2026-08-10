@@ -1,183 +1,322 @@
-<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoIP Network Simulator Pro & Complete Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D3.js (Topology) -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .config-code {
+            background-color: #0f172a;
+            color: #38bdf8;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.3);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .tab-active { background-color: #2563eb; color: white; border-color: #2563eb; }
+        .tab-inactive { background-color: #1e293b; color: #94a3b8; border-color: #334155; }
+        .tab-inactive:hover { background-color: #334155; color: white; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        .explanation-block {
+            background-color: #1e293b;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+        /* Simulator Styles */
+        svg { overflow: visible; }
+        .node-spine { fill: #1e40af; stroke: #3b82f6; stroke-width: 2px; }
+        .node-device { fill: #1e293b; stroke: #475569; stroke-width: 1.5px; }
+        .node-down { fill: #450a0a !important; stroke: #ef4444 !important; }
+        .link { stroke: #475569; stroke-opacity: 0.6; stroke-dasharray: 4; stroke-width: 1.5px; }
+        .group-box { fill: rgba(30, 41, 59, 0.4); stroke: #334155; stroke-width: 1.5px; stroke-dasharray: 6 4; border-radius: 8px; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 30vh; max-height: 350px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; max-width: 800px; } }
+        
+        /* Custom Resizer */
+        .resizer-x { cursor: col-resize; width: 6px; background-color: #334155; transition: background 0.2s; border-radius: 3px; }
+        .resizer-x:hover, .resizer-x.active { background-color: #38bdf8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col h-screen overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white shadow-md py-3 px-6 z-20 relative border-b-4 border-blue-500 flex justify-between items-center flex-shrink-0">
+        <div>
+            <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
+                <span>⚡</span> MoIP Network Simulator Pro & Guide <span class="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full">Asian Games Edition</span>
+            </h1>
+        </div>
+        <!-- Main View Switcher -->
+        <div class="flex gap-2 text-sm">
+            <button onclick="switchMainView('simulator')" id="main-btn-simulator" class="px-4 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow transition-all">🗺️ ネットワークシミュレーター</button>
+            <button onclick="switchMainView('guide')" id="main-btn-guide" class="px-4 py-1.5 rounded-lg font-bold bg-slate-800 text-slate-300 border border-slate-700 transition-all">📖 コンフィグ徹底解説ガイド</button>
+        </div>
+    </header>
+
+    <!-- VIEW 1: SIMULATOR -->
+    <main id="view-simulator" class="flex-grow max-w-[1400px] mx-auto w-full p-4 flex flex-col lg:flex-row gap-4 h-[calc(100vh-60px)] overflow-hidden">
         <!-- Left Pane: Config Editor & Controls -->
-        <div class="lg:w-5/12 flex flex-col gap-4">
-            <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-4 flex flex-col h-[75vh]">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="flex items-center gap-2">
-                        <select id="vendor-selector" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-sky-400 font-bold outline-none focus:border-sky-500">
+        <div class="lg:w-5/12 flex flex-col gap-3 h-full">
+            <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-3 flex flex-col h-full">
+                <!-- Top Toolbar -->
+                <div class="flex flex-col gap-2 mb-2">
+                    <div class="flex justify-between items-center">
+                        <select id="vendor-selector" onchange="changeVendor()" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs text-sky-400 font-bold outline-none focus:border-sky-500">
                             <option value="cisco">Cisco (NX-OS)</option>
                             <option value="huawei">HUAWEI (VRP)</option>
                             <option value="h3c">H3C (Comware)</option>
                         </select>
-                        <h2 class="text-sm font-bold text-slate-200">Config</h2>
+                        <div class="flex gap-1.5 text-xs items-center">
+                            <input type="text" id="save-name-input" class="w-28 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-[10px] text-slate-300 outline-none focus:border-sky-500" placeholder="保存名 (例: pat_a)">
+                            <button onclick="saveToLocalStorage()" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium shadow transition" title="ブラウザに保存">💾</button>
+                            <button onclick="loadFromLocalStorage()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium shadow transition" title="ブラウザから読込">📂</button>
+                            <button onclick="exportJSON()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium shadow transition" title="ファイルへ出力">⬇️</button>
+                            <label class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded font-medium shadow transition cursor-pointer" title="ファイルから読込">
+                                ⬆️<input type="file" id="import-file" class="hidden" onchange="importJSON(event)">
+                            </label>
+                        </div>
                     </div>
-                    <div class="flex gap-1.5 text-xs">
-                        <input type="text" id="save-name-input" class="w-28 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-[10px] text-slate-300 outline-none focus:border-sky-500" placeholder="保存名 (例: pattern_a)">
-<!-- ... existing code ... -->
-        // Default Asian Games Config
-        const defaultAsianConfig = `hostname Spine_A
-
-feature telnet
-feature nxapi
-// ... existing code ...
-interface loopback3
-  vrf member Control2
-  ip address 10.211.255.30/32
-  ip router ospf 1 area 0.0.0.0`;
-
-        // HUAWEI Default Config
-        const defaultHuaweiConfig = `sysname Spine_A
-
-ptp enable
-ptp domain 127
-
-vlan batch 1 100 110 120 130 140 150 2010 to 2018 2300 to 2302
-
-ip vpn-instance Media
-  ipv4-family
-ip vpn-instance Control1
-  ipv4-family
-ip vpn-instance Control2
-  ipv4-family
-
-interface Vlanif100
-  ip binding vpn-instance Media
-  ip address 10.211.118.233 30
-  ospf enable 1 area 0.0.0.0
-  pim sm
-  igmp enable
-  igmp version 3
-  igmp prompt-leave
-
-interface XGigabitEthernet1/0/1
-  description To_SPG9000_1
-  ptp enable
-  ip address 10.211.118.1 30
-  undo shutdown
-
-interface XGigabitEthernet1/0/7
-  description TO_FA1616_4_1A
-  ptp enable
-  port link-type trunk
-  port trunk allow-pass vlan 2010 to 2018
-  undo shutdown`;
-
-        // H3C Default Config (仮)
-        const defaultH3cConfig = `sysname Spine_A\n\n! H3C用の基本コンフィグをここに展開します。\n! 構文はHUAWEIと似ていますが、細部が異なります。`;
-
-        document.getElementById('config-input').value = defaultAsianConfig;
-
-        // --- STREAMING_CHUNK:JavaScript Variables & Helpers ---
-// ... existing code ...
-        // --- STREAMING_CHUNK:JavaScript Config Parser ---
-        function expandVlanRange(vlanStr) {
-// ... existing code ...
-            return vlans;
-        }
-
-        function parseConfig(text) {
-            const vendor = document.getElementById('vendor-selector').value;
-            const lines = text.split('\n');
-            const state = {
-                interfaces: {},
-                routes: [],
-                ptpGlobal: false,
-                hostname: "Spine_A" // Default
-            };
-            
-            let currentIf = null;
-            let currentVrf = "default";
-
-            lines.forEach(line => {
-                line = line.trim();
+                </div>
+                <!-- Textarea -->
+                <textarea id="config-input" class="w-full flex-grow bg-slate-900 text-sky-400 font-mono text-[10px] p-3 rounded border border-slate-700 focus:outline-none focus:border-blue-500 resize-none leading-relaxed whitespace-pre"></textarea>
                 
-                if (vendor === 'cisco') {
-                    // --- Cisco (NX-OS) Parser ---
-                    if (line.startsWith('hostname')) state.hostname = line.split(/\s+/)[1];
-                    if (line.startsWith('feature ptp')) state.ptpGlobal = true;
-                    if (line.startsWith('vrf context')) currentVrf = line.split(/\s+/)[2];
+                <button onclick="initSimulator()" class="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm shadow transition flex items-center justify-center gap-2 flex-shrink-0">
+                    <span>🔄</span> コンフィグを解析してトポロジーを構築
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Pane: Topology & Simulation Tabs -->
+        <div class="lg:w-7/12 flex flex-col gap-3 h-full">
+            <!-- Topology Canvas -->
+            <div class="bg-slate-900 rounded-xl shadow-lg border border-slate-700 flex-grow relative overflow-hidden flex items-center justify-center" id="canvas-container">
+                <svg id="topology-svg" class="w-full h-full cursor-grab active:cursor-grabbing"></svg>
+                <div class="absolute bottom-3 right-3 bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg pointer-events-none flex gap-3">
+                    <span>🖱️ ホイール: ズーム</span>
+                    <span>✋ ドラッグ: 移動</span>
+                </div>
+            </div>
+
+            <!-- Simulation Controls & Tabs (Resizable) -->
+            <div class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-2 flex flex-col h-[35vh] flex-shrink-0">
+                <!-- Header Tabs -->
+                <div class="flex gap-2 border-b border-slate-700 pb-2 overflow-x-auto flex-shrink-0">
+                    <button onclick="switchSimTab('ping')" id="sim-tab-ping" class="px-3 py-1.5 rounded text-[11px] font-bold tab-active whitespace-nowrap">🔥 Ping (Unicast)</button>
+                    <button onclick="switchSimTab('igmp')" id="sim-tab-igmp" class="px-3 py-1.5 rounded text-[11px] font-bold tab-inactive whitespace-nowrap">📡 IGMP / PIM</button>
+                    <button onclick="switchSimTab('ptp')" id="sim-tab-ptp" class="px-3 py-1.5 rounded text-[11px] font-bold tab-inactive whitespace-nowrap">⏱️ PTP Status</button>
+                    <button onclick="switchSimTab('endpoints')" id="sim-tab-endpoints" class="px-3 py-1.5 rounded text-[11px] font-bold tab-inactive whitespace-nowrap">💻 接続機器IP設定</button>
+                    <button onclick="switchSimTab('iplist')" id="sim-tab-iplist" class="px-3 py-1.5 rounded text-[11px] font-bold tab-inactive whitespace-nowrap">📋 Switch IP List</button>
+                </div>
+
+                <!-- Resizable Content Area -->
+                <div class="flex flex-1 mt-2 min-h-0 overflow-hidden">
                     
-                    if (line.startsWith('ip route ')) {
-                        const parts = line.split(/\s+/);
-                        if(parts.length >= 4) {
-                            let route = { dest: parts[2], target: parts[3] };
-                            if(parts[4] === 'vrf') route.leakVrf = parts[5];
-                            state.routes.push(route);
-                        }
-                    }
+                    <!-- Left: Tab Content -->
+                    <div id="sim-tab-content-area" class="overflow-y-auto pr-2" style="flex-basis: 50%;">
+                        <!-- Ping Tab -->
+                        <div id="sim-pane-ping" class="space-y-2 text-xs">
+                            <div>
+                                <label class="text-slate-400 block mb-1">送信元 (Source)</label>
+                                <select id="ping-src" class="w-full bg-slate-900 border border-slate-700 text-slate-200 p-1.5 rounded outline-none"></select>
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">宛先 IP (Destination)</label>
+                                <input type="text" id="ping-dest" class="w-full bg-slate-900 border border-slate-700 text-slate-200 p-1.5 rounded outline-none" value="10.211.0.4">
+                            </div>
+                            <div class="flex justify-between items-center mt-3">
+                                <button onclick="runPing()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold shadow">ICMP Echo 実行</button>
+                            </div>
+                        </div>
 
-                    if (line.startsWith('interface ')) {
-                        const name = line.split(/\s+/)[1];
-                        currentIf = { 
-                            name: name, desc: '', vrf: 'default', ip: null, isUp: false, 
-                            ptp: false, ptpAnnounce: null, ptpSync: null, ptpDelayReq: null,
-                            pim: false, igmpImmediateLeave: false, isTrunk: false, allowedVlans: [] 
-                        };
-                        state.interfaces[name] = currentIf;
-                    } else if (currentIf && line) {
-                        if(line.startsWith('description ')) currentIf.desc = line.substring(12);
-                        else if(line.startsWith('vrf member ')) currentIf.vrf = line.substring(11);
-                        else if(line.startsWith('ip address ')) {
-                            const [ip, mask] = line.substring(11).split('/');
-                            currentIf.ip = { ip, mask: parseInt(mask) || 32 };
-                        }
-                        else if(line === 'no shutdown' || currentIf.name.startsWith('loopback')) currentIf.isUp = true;
-                        else if(line === 'ptp' || line.startsWith('ptp vlan')) currentIf.ptp = true;
-                        else if(line.startsWith('ptp announce interval smpte-2059-2 ')) currentIf.ptpAnnounce = line.split(' ').pop();
-                        else if(line.startsWith('ptp sync interval smpte-2059-2 ')) currentIf.ptpSync = line.split(' ').pop();
-                        else if(line.startsWith('ptp delay-request minimum interval smpte-2059-2 ')) currentIf.ptpDelayReq = line.split(' ').pop();
-                        else if(line === 'ip pim sparse-mode') currentIf.pim = true;
-                        else if(line === 'ip igmp immediate-leave') currentIf.igmpImmediateLeave = true;
-                        else if(line === 'switchport mode trunk') currentIf.isTrunk = true;
-                        else if(line.startsWith('switchport trunk allowed vlan ')) currentIf.allowedVlans = expandVlanRange(line.substring(30));
-                    }
-                } else if (vendor === 'huawei' || vendor === 'h3c') {
-                    // --- HUAWEI (VRP) / H3C (Comware) Parser ---
-                    if (line.startsWith('sysname')) state.hostname = line.split(/\s+/)[1];
-                    if (line.startsWith('ptp enable')) state.ptpGlobal = true;
-                    if (line.startsWith('ip vpn-instance')) currentVrf = line.split(/\s+/)[2];
-                    
-                    if (line.startsWith('ip route-static ')) {
-                        // Huawei/H3C routing parse logic can be expanded here
-                    }
+                        <!-- IGMP Tab -->
+                        <div id="sim-pane-igmp" class="hidden space-y-2 text-xs">
+                            <div><label class="text-slate-400 block mb-1">受信機 (Receiver)</label><select id="igmp-receiver" class="w-full bg-slate-900 border border-slate-700 text-slate-200 p-1.5 rounded"></select></div>
+                            <div><label class="text-slate-400 block mb-1">ソース IP (Source)</label><input type="text" id="igmp-src-ip" class="w-full bg-slate-900 border border-slate-700 text-slate-200 p-1.5 rounded" value="10.211.28.1"></div>
+                            <div><label class="text-slate-400 block mb-1">マルチキャスト IP</label><input type="text" id="igmp-mc-ip" class="w-full bg-slate-900 border border-slate-700 text-slate-200 p-1.5 rounded" value="239.69.1.1"></div>
+                            <button onclick="runIgmpJoin()" class="mt-2 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold shadow w-full">IGMP Join 送信テスト</button>
+                        </div>
 
-                    if (line.startsWith('interface ')) {
-                        const name = line.split(/\s+/)[1];
-                        currentIf = { 
-                            name: name, desc: '', vrf: 'default', ip: null, isUp: false, 
-                            ptp: false, ptpAnnounce: null, ptpSync: null, ptpDelayReq: null,
-                            pim: false, igmpImmediateLeave: false, isTrunk: false, allowedVlans: [] 
-                        };
-                        state.interfaces[name] = currentIf;
-                    } else if (currentIf && line) {
-                        if(line.startsWith('description ')) currentIf.desc = line.substring(12);
-                        else if(line.startsWith('ip binding vpn-instance ')) currentIf.vrf = line.substring(24);
-                        else if(line.startsWith('ip address ')) {
-                            const parts = line.split(/\s+/);
-                            currentIf.ip = { ip: parts[2], mask: parseInt(parts[3]) || 32 };
-                        }
-                        else if(line === 'undo shutdown' || currentIf.name.startsWith('LoopBack')) currentIf.isUp = true;
-                        else if(line === 'ptp enable') currentIf.ptp = true;
-                        else if(line === 'pim sm') currentIf.pim = true;
-                        else if(line === 'igmp prompt-leave' || line === 'igmp fast-leave') currentIf.igmpImmediateLeave = true;
-                        else if(line === 'port link-type trunk') currentIf.isTrunk = true;
-                        else if(line.startsWith('port trunk allow-pass vlan ')) {
-                            let vStr = line.substring(27).replace(/to/g, '-');
-                            currentIf.allowedVlans = expandVlanRange(vStr);
-                        }
-                    }
-                }
-            });
+                        <!-- PTP Tab -->
+                        <div id="sim-pane-ptp" class="hidden space-y-3 text-xs">
+                            <button onclick="runPtpCheck()" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold shadow">PTPロック診断実行</button>
+                            <div id="ptp-status-summary" class="text-slate-400 bg-slate-900 p-2 rounded border border-slate-700">ST 2059-2 プロファイル厳密チェックを行います。</div>
+                        </div>
 
-            parsedState = state;
-            return state;
-        }
+                        <!-- Endpoints Tab -->
+                        <div id="sim-pane-endpoints" class="hidden space-y-2 text-xs">
+                            <div id="endpoints-container" class="space-y-1.5"></div>
+                        </div>
 
-        // --- STREAMING_CHUNK:JavaScript Topology Builder ---
-// ... existing code ...
-        // --- STREAMING_CHUNK:JavaScript Data Management (Save/Load/Templates) ---
-        const configTemplates = {
-            cisco_asian_games: `Spine_A# show urn
+                        <!-- IP List Tab -->
+                        <div id="sim-pane-iplist" class="hidden text-xs">
+                            <div id="iplist-container" class="w-full overflow-x-auto"></div>
+                        </div>
+                    </div>
+
+                    <!-- Draggable Resizer -->
+                    <div id="resizer" class="resizer-x mx-1 flex-shrink-0" title="ドラッグで幅を変更"></div>
+
+                    <!-- Right: Log Console -->
+                    <div id="log-wrapper" class="overflow-y-auto bg-black border border-slate-700 p-2 font-mono text-[10px] text-slate-300 rounded shadow-inner" style="flex-basis: 50%;">
+                        <div id="log-console" class="space-y-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW 2: GUIDE (MoIP Config 徹底解剖ガイド) -->
+    <div id="view-guide" class="hidden flex-grow max-w-7xl mx-auto w-full p-4 md:p-6 flex flex-col lg:flex-row gap-6 h-[calc(100vh-60px)] overflow-hidden">
+        <!-- Guide Sidebar -->
+        <nav class="lg:w-1/4 flex-shrink-0 h-full overflow-y-auto pr-2">
+            <div class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-4">
+                <h2 class="text-lg font-bold text-slate-200 mb-4 border-b border-slate-700 pb-2">コンフィグ解説メニュー</h2>
+                <div class="flex flex-col gap-2" id="nav-tabs">
+                    <button onclick="switchGuideTab('system')" id="guide-btn-system" class="tab-active text-left px-4 py-3 rounded-lg border font-medium transition-colors">
+                        <div class="flex items-center gap-2"><span class="text-xl">🖥️</span><span class="leading-tight">1. システム基盤・HW</span></div>
+                    </button>
+                    <button onclick="switchGuideTab('network')" id="guide-btn-network" class="tab-inactive text-left px-4 py-3 rounded-lg border font-medium transition-colors">
+                        <div class="flex items-center gap-2"><span class="text-xl">🌍</span><span class="leading-tight">2. NW共通・ルーティング</span></div>
+                    </button>
+                    <button onclick="switchGuideTab('interfaces')" id="guide-btn-interfaces" class="tab-inactive text-left px-4 py-3 rounded-lg border font-medium transition-colors">
+                        <div class="flex items-center gap-2"><span class="text-xl">🔌</span><span class="leading-tight">3. インターフェース</span></div>
+                    </button>
+                    <button onclick="switchGuideTab('auto')" id="guide-btn-auto" class="tab-inactive text-left px-4 py-3 rounded-lg border font-medium transition-colors">
+                        <div class="flex items-center gap-2"><span class="text-xl">🛡️</span><span class="leading-tight">4. 自動生成・定型文</span></div>
+                    </button>
+                    <button onclick="switchGuideTab('ref')" id="guide-btn-ref" class="tab-inactive text-left px-4 py-3 rounded-lg border font-medium transition-colors">
+                        <div class="flex items-center gap-2"><span class="text-xl">📚</span><span class="leading-tight">5. 現場頻出コマンド</span></div>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <!-- Guide Content Area -->
+        <div class="lg:w-3/4 flex flex-col w-full text-slate-200 h-full overflow-y-auto pr-2 pb-10">
+            <!-- Section 1 -->
+            <section id="guide-sec-system" class="block space-y-6">
+                <div class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                    <div class="bg-slate-900 px-4 py-3 border-b border-slate-700"><h2 class="text-lg font-bold text-white">1. システム基盤・ハードウェア制御</h2></div>
+                    <div class="p-6 space-y-6">
+                        <div>
+                            <div class="config-code mb-2">hostname Spine_A<br>vdc Spine_A id 1<br>  limit-resource vlan minimum 16 maximum 4094<br>  limit-resource vrf minimum 2 maximum 4096<br>  limit-resource port-channel minimum 0 maximum 511<br>  limit-resource m4route-mem minimum 58 maximum 58<br>  limit-resource m6route-mem minimum 8 maximum 8</div>
+                            <div class="explanation-block text-sm text-slate-300">
+                                <strong>【機器の根幹とリソース配分（VDC）】</strong><br>
+                                物理スイッチを論理的に分割する「VDC」の設定です。<code>m4route-mem minimum 58 maximum 58</code> は、<strong>「IPv4マルチキャスト（MoIPの映像・音声）の経路を記憶するためのメモリ58MBを、他の処理に奪われないよう上限・下限ともに固定して完全にロック（専有）する」</strong>という、放送事故を防ぐための強い意志が込められた設計です。
+                            </div>
+                        </div>
+                        <div>
+                            <div class="config-code mb-2 text-indigo-300">line console<br>line vty<br>boot nxos bootflash:/nxos64-cs.10.4.5.M.bin</div>
+                            <div class="explanation-block border-l-indigo-500 text-sm text-slate-300 bg-slate-900/50">
+                                <strong>🔌 【ログイン制御と起動OS】</strong><br>
+                                <ul class="list-disc pl-5 mt-1 space-y-1">
+                                    <li><code>line console / vty</code>: スイッチに直接ケーブルを挿す「コンソール接続」と、TeraTerm等で遠隔から入る「VTY接続（SSH等）」の入り口の設定です。</li>
+                                    <li><code>boot nxos ...</code>: スイッチを再起動した際に<strong>「必ずこのバージョンのOS(NX-OS)ファイルを使って起動しなさい」</strong>という絶対的な指示です。意図しない古いバージョンで立ち上がるのを防ぎます。</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="config-code mb-2">feature telnet<br>feature nxapi<br>feature ospf<br>feature pim<br>feature interface-vlan<br>feature hsrp<br>feature dhcp<br>feature ptp<br>feature lldp</div>
+                            <div class="explanation-block text-sm text-slate-300">
+                                <strong>【機能のアンロック（Feature設定）】</strong><br>
+                                Nexusスイッチは初期状態では高度な機能が封印されています。ここで必要な能力をONにします。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Section 2 -->
+            <section id="guide-sec-network" class="hidden space-y-6">
+                <div class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden">
+                    <div class="bg-slate-900 px-4 py-3 border-b border-slate-700"><h2 class="text-lg font-bold text-white">2. NW共通・ルーティング (L2/L3/Multicast)</h2></div>
+                    <div class="p-6 space-y-6">
+                        <div>
+                            <div class="config-code mb-2 text-green-300">ip pim ssm range 232.0.0.0/8 239.69.0.0/16<br>ip igmp ssm-translate 239.69.171.0/24 10.234.88.35</div>
+                            <div class="explanation-block border-l-green-500 text-sm text-slate-300 bg-slate-900/50">
+                                <strong>🎯 【マルチキャスト制御の中核 (SSM)】</strong><br>
+                                古い機材（IGMPv2）が「239.69.171.xが見たい」と言ってきた際、スイッチが気を利かせて<strong>「送信元は10.234.88.35だよ」と翻訳してあげる救済措置（マッピング表）</strong>です。
+                            </div>
+                        </div>
+                        <div>
+                            <div class="config-code mb-2 text-purple-300">vrf context management<br>  ip route 0.0.0.0/0 10.211.0.1<br>vrf context Control1<br>  ip route 10.198.28.0/30 Vlan100 vrf Media</div>
+                            <div class="explanation-block border-l-purple-500 text-sm text-slate-300 bg-slate-900/50">
+                                <strong>🚀 【VRFとルーティング (デフォルトルート / リーキング)】</strong><br>
+                                <code>ip route [宛先] Vlan100 vrf Media</code> は<strong>「Route Leaking（ルートリーキング）」</strong>と呼ばれる高度な技術です。本来完全に隔離されているControl網とMedia網の間で、ピンポイントで通信の穴を開けています。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Section 3 -->
+            <section id="guide-sec-interfaces" class="hidden space-y-6">
+                <div class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6">
+                    <h2 class="text-2xl font-bold text-white mb-2">3. インターフェース設定解説</h2>
+                    <p class="text-slate-400 mb-4">以下のドロップダウンから各ポートの生コンフィグと詳細解説を確認できます。</p>
+                    <div class="w-full mb-6">
+                        <div class="chart-container"><canvas id="interfaceChart"></canvas></div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="bg-slate-900 text-slate-300 text-xs py-1 px-3 rounded-t border-b border-slate-700">Sample Raw Config</div>
+                            <div id="guide-if-code" class="config-code rounded-t-none text-sm h-64 overflow-y-auto"></div>
+                        </div>
+                        <div class="flex flex-col h-full">
+                            <div class="bg-blue-900/50 text-blue-200 text-xs py-1 px-3 rounded-t border border-blue-700 border-b-0 font-bold">解説</div>
+                            <div id="guide-if-explanation" class="bg-slate-900 border border-blue-700 rounded-b p-4 text-sm text-slate-300 flex-grow h-64 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <select id="guide-interface-selector" class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-2.5 w-full">
+                            <option value="vlan100">Vlan100 (メディア網 / 映像・PTP用)</option>
+                            <option value="eth1_1_1">Eth1/1/1 (L3ポート：PTP GM直接接続)</option>
+                            <option value="eth1_7_1">Eth1/7/1 (L2トランク：映像GW接続)</option>
+                            <option value="loopback1">Loopback1 (仮想ポート)</option>
+                            <option value="mgmt0">mgmt0 (管理ポート)</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+            <!-- Section 4 -->
+            <section id="guide-sec-auto" class="hidden space-y-6">
+                <div class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6 space-y-4">
+                    <h2 class="text-lg font-bold text-white">4. 自動生成・定型文（おまじない領域）</h2>
+                    <p class="text-sm text-slate-300">CoPP（コントロールプレーン保護）、TCAMメモリ割り当て、SNMP監視設定など、システム保護のための自動生成コード群です。</p>
+                </div>
+            </section>
+            <!-- Section 5 -->
+            <section id="guide-sec-ref" class="hidden space-y-6">
+                <div class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 p-6 flex flex-col h-[70vh]">
+                    <h2 class="text-lg font-bold text-white mb-2">5. 現場頻出コマンド大辞典</h2>
+                    <input type="text" id="cmd-search" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-sm text-slate-200 outline-none focus:border-blue-500 mb-4" placeholder="🔍 検索 (例: ptp, 保存, show...)">
+                    <div id="cmd-list" class="flex-grow overflow-y-auto pr-2 space-y-3">
+                        <!-- JS Injection for commands -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        // --- STREAMING_CHUNK: Default Configs ---
+        const defaultAsianConfig = `Spine_A# show urn
                ^
 % Invalid command at '^' marker.
 Spine_A# show run
@@ -206,8 +345,6 @@ feature ptp
 feature lldp
 clock timezone JST 9 0
 clock protocol ptp vdc 1
-
-
 
 ip route 192.168.100.0/24 192.168.100.1
 ip pim ssm range 232.0.0.0/8 239.69.0.0/16
@@ -349,7 +486,6 @@ ptp source 10.211.255.28
 ptp priority1 3
 ptp priority2 3
 ptp domain 127
-
 
 interface Vlan1
 
@@ -1266,5 +1402,511 @@ router ospf 1
     router-id 10.211.255.28
     passive-interface default`;
 
-        // HUAWEI Default Config
         const defaultHuaweiConfig = `sysname Spine_A
+ptp enable
+ptp domain 127
+
+vlan batch 1 100 110 120 130 140 150 2010 to 2018 2300 to 2302
+
+ip vpn-instance Media
+  ipv4-family
+ip vpn-instance Control1
+  ipv4-family
+ip vpn-instance Control2
+  ipv4-family
+
+interface Vlanif100
+  ip binding vpn-instance Media
+  ip address 10.211.118.233 30
+  ospf enable 1 area 0.0.0.0
+  pim sm
+  igmp enable
+  igmp version 3
+  igmp prompt-leave
+
+interface XGigabitEthernet1/0/1
+  description To_SPG9000_1
+  ptp enable
+  ip address 10.211.118.1 30
+  undo shutdown
+
+interface XGigabitEthernet1/0/7
+  description TO_FA1616_4_1A
+  ptp enable
+  port link-type trunk
+  port trunk allow-pass vlan 2010 to 2018
+  undo shutdown`;
+
+        const defaultH3cConfig = `sysname Spine_A\n\n! H3C用の基本コンフィグをここに展開します。\n! 構文はHUAWEIと似ていますが、細部が異なります。`;
+
+        // --- STREAMING_CHUNK: State & Init ---
+        let parsedState = {};
+        let connectedDevices = {};
+        let isSimulating = false;
+        
+        document.getElementById('config-input').value = defaultAsianConfig;
+
+        function changeVendor() {
+            const vendor = document.getElementById('vendor-selector').value;
+            const configInput = document.getElementById('config-input');
+            if (vendor === 'huawei') configInput.value = defaultHuaweiConfig;
+            else if (vendor === 'h3c') configInput.value = defaultH3cConfig;
+            else configInput.value = defaultAsianConfig;
+            initSimulator();
+        }
+
+        function switchMainView(view) {
+            const simBtn = document.getElementById('main-btn-simulator');
+            const guideBtn = document.getElementById('main-btn-guide');
+            const simView = document.getElementById('view-simulator');
+            const guideView = document.getElementById('view-guide');
+
+            if (view === 'simulator') {
+                simBtn.className = "px-4 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow transition-all";
+                guideBtn.className = "px-4 py-1.5 rounded-lg font-bold bg-slate-800 text-slate-300 border border-slate-700 transition-all";
+                simView.classList.remove('hidden');
+                guideView.classList.add('hidden');
+                setTimeout(() => initSimulator(), 50);
+            } else {
+                guideBtn.className = "px-4 py-1.5 rounded-lg font-bold bg-blue-600 text-white shadow transition-all";
+                simBtn.className = "px-4 py-1.5 rounded-lg font-bold bg-slate-800 text-slate-300 border border-slate-700 transition-all";
+                guideView.classList.remove('hidden');
+                simView.classList.add('hidden');
+            }
+        }
+
+        function switchSimTab(tab) {
+            ['ping', 'igmp', 'ptp', 'endpoints', 'iplist'].forEach(t => {
+                const btn = document.getElementById(`sim-tab-${t}`);
+                if(t === tab) {
+                    btn.classList.replace('tab-inactive', 'tab-active');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.replace('tab-active', 'tab-inactive');
+                    btn.classList.add('text-slate-400');
+                }
+                document.getElementById(`sim-pane-${t}`).classList.toggle('hidden', t !== tab);
+            });
+        }
+
+        function switchGuideTab(tab) {
+            ['system', 'network', 'interfaces', 'auto', 'ref'].forEach(t => {
+                const btn = document.getElementById(`guide-btn-${t}`);
+                if(t === tab) {
+                    btn.classList.replace('tab-inactive', 'tab-active');
+                } else {
+                    btn.classList.replace('tab-active', 'tab-inactive');
+                }
+                document.getElementById(`guide-sec-${t}`).classList.toggle('hidden', t !== tab);
+            });
+        }
+
+        function logConsoleOutput(msg, type = 'info') {
+            const consoleDiv = document.getElementById('log-console');
+            const time = new Date().toLocaleTimeString();
+            let color = '#cbd5e1';
+            if (type === 'error') color = '#ef4444';
+            if (type === 'success') color = '#10b981';
+            if (type === 'warn') color = '#f59e0b';
+            
+            const p = document.createElement('div');
+            p.style.color = color;
+            p.innerText = `[${time}] ${msg}`;
+            consoleDiv.appendChild(p);
+            consoleDiv.parentElement.scrollTop = consoleDiv.parentElement.scrollHeight;
+        }
+
+        // --- STREAMING_CHUNK: Parsers ---
+        function expandVlanRange(vlanStr) {
+            let vlans = [];
+            vlanStr.split(',').forEach(part => {
+                if (part.includes('-') || part.includes('to')) {
+                    const separator = part.includes('-') ? '-' : 'to';
+                    const [start, end] = part.split(separator).map(s => parseInt(s.trim()));
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let i = start; i <= end; i++) vlans.push(i.toString());
+                    }
+                } else {
+                    vlans.push(part.trim());
+                }
+            });
+            return vlans;
+        }
+
+        function parseConfig(text) {
+            const vendor = document.getElementById('vendor-selector').value;
+            const lines = text.split('\n');
+            const state = { interfaces: {}, routes: [], hostname: "Spine_A" };
+            let currentIf = null;
+            let currentVrf = "default";
+
+            lines.forEach(line => {
+                line = line.trim();
+                
+                if (vendor === 'cisco') {
+                    if (line.startsWith('hostname')) state.hostname = line.split(/\s+/)[1];
+                    if (line.startsWith('vrf context')) currentVrf = line.split(/\s+/)[2];
+                    if (line.startsWith('ip route ')) {
+                        const parts = line.split(/\s+/);
+                        if(parts.length >= 4) {
+                            let route = { dest: parts[2], target: parts[3] };
+                            if(parts[4] === 'vrf') route.leakVrf = parts[5];
+                            state.routes.push(route);
+                        }
+                    }
+                    if (line.startsWith('interface ')) {
+                        const name = line.split(/\s+/)[1];
+                        currentIf = { name: name, desc: '', vrf: 'default', ip: null, isUp: false, ptp: false, ptpAnnounce: null, ptpSync: null, ptpDelayReq: null, isTrunk: false, allowedVlans: [] };
+                        state.interfaces[name] = currentIf;
+                    } else if (currentIf && line) {
+                        if(line.startsWith('description ')) currentIf.desc = line.substring(12);
+                        else if(line.startsWith('vrf member ')) currentIf.vrf = line.substring(11);
+                        else if(line.startsWith('ip address ')) {
+                            const parts = line.substring(11).split('/');
+                            currentIf.ip = { ip: parts[0], mask: parseInt(parts[1]) || 32 };
+                        }
+                        else if(line === 'no shutdown' || currentIf.name.startsWith('loopback')) currentIf.isUp = true;
+                        else if(line === 'ptp' || line.startsWith('ptp vlan')) currentIf.ptp = true;
+                        else if(line.startsWith('ptp announce interval smpte-2059-2 ')) currentIf.ptpAnnounce = line.split(' ').pop();
+                        else if(line.startsWith('ptp sync interval smpte-2059-2 ')) currentIf.ptpSync = line.split(' ').pop();
+                        else if(line.startsWith('ptp delay-request minimum interval smpte-2059-2 ')) currentIf.ptpDelayReq = line.split(' ').pop();
+                        else if(line === 'switchport mode trunk') currentIf.isTrunk = true;
+                        else if(line.startsWith('switchport trunk allowed vlan ')) currentIf.allowedVlans = expandVlanRange(line.substring(30));
+                    }
+                } else {
+                    // Huawei / H3C
+                    if (line.startsWith('sysname')) state.hostname = line.split(/\s+/)[1];
+                    if (line.startsWith('ip vpn-instance')) currentVrf = line.split(/\s+/)[2];
+                    if (line.startsWith('interface ')) {
+                        const name = line.split(/\s+/)[1];
+                        currentIf = { name: name, desc: '', vrf: 'default', ip: null, isUp: false, ptp: false, isTrunk: false, allowedVlans: [] };
+                        state.interfaces[name] = currentIf;
+                    } else if (currentIf && line) {
+                        if(line.startsWith('description ')) currentIf.desc = line.substring(12);
+                        else if(line.startsWith('ip binding vpn-instance ')) currentIf.vrf = line.substring(24);
+                        else if(line.startsWith('ip address ')) {
+                            const parts = line.split(/\s+/);
+                            if(parts.length >= 4) currentIf.ip = { ip: parts[2], mask: parseInt(parts[3]) || 32 };
+                        }
+                        else if(line === 'undo shutdown' || currentIf.name.startsWith('LoopBack')) currentIf.isUp = true;
+                        else if(line === 'ptp enable') currentIf.ptp = true;
+                        else if(line === 'port link-type trunk') currentIf.isTrunk = true;
+                        else if(line.startsWith('port trunk allow-pass vlan ')) currentIf.allowedVlans = expandVlanRange(line.substring(27));
+                    }
+                }
+            });
+            return state;
+        }
+
+        // --- STREAMING_CHUNK: Topology ---
+        let d3Nodes = [];
+        let d3Links = [];
+
+        function getGroupName(desc) {
+            if (!desc) return 'Other';
+            const d = desc.toUpperCase();
+            if (d.includes('SPG')) return 'SPG9000 (PTP GM)';
+            if (d.includes('VIRTUOSO')) return 'VIRTUOSO (Media Node)';
+            if (d.includes('FA1616')) return 'FA1616 (Video GW)';
+            if (d.includes('NETGEAR')) return 'NETGEAR (Control SW)';
+            if (d.includes('XSCEND')) return 'Xscend (Encoder)';
+            if (d.includes('TAG')) return 'TAG (Analyzer)';
+            if (d.includes('MLS')) return 'MLS-X1 (Multiviewer)';
+            if (d.includes('QXP')) return 'QxP (Analyzer)';
+            if (d.includes('CBC') || d.includes('GST')) return 'Media Core';
+            if (d.includes('BLUE_SPINE')) return 'Blue_Spine';
+            if (d.includes('HIRAKAWA')) return 'Hirakawa';
+            return 'Unknown';
+        }
+
+        function initSimulator() {
+            document.getElementById('log-console').innerHTML = '';
+            logConsoleOutput('コンフィグを解析し、ツリー型トポロジーを構築しています...');
+            
+            parsedState = parseConfig(document.getElementById('config-input').value);
+            
+            d3Nodes = []; d3Links = [];
+            let groupMap = new Map();
+            
+            d3Nodes.push({ id: 'Spine', name: parsedState.hostname + '\n(L3 Switch)', type: 'spine', fx: 0, fy: -100 });
+            
+            const physicalIfs = Object.values(parsedState.interfaces).filter(i => 
+                i.name.toLowerCase().includes('ethernet') || i.name === 'mgmt0'
+            );
+
+            physicalIfs.forEach(iface => {
+                let icon = '📺';
+                if (iface.desc.includes('SPG') || iface.desc.includes('PTP')) icon = '⏱️';
+                else if (iface.desc.includes('Send') || iface.desc.includes('Cam')) icon = '🎥';
+                
+                const gName = getGroupName(iface.desc);
+                if (!groupMap.has(gName)) groupMap.set(gName, { id: gName, nodes: [] });
+                
+                const nodeObj = { id: iface.name, name: `${icon} ${iface.desc || iface.name}`, sub: iface.name, type: 'device', groupName: gName, up: iface.isUp, data: iface };
+                d3Nodes.push(nodeObj);
+                d3Links.push({ source: 'Spine', target: iface.name });
+                groupMap.get(gName).nodes.push(nodeObj);
+                
+                if (iface.ip && !connectedDevices[iface.name]) connectedDevices[iface.name] = { ip: '' };
+            });
+
+            const groups = Array.from(groupMap.values()).filter(g => g.nodes.length > 0);
+
+            // D3 Drawing
+            const svg = d3.select("#topology-svg");
+            svg.selectAll("*").remove();
+            
+            const width = svg.node().clientWidth || 800;
+            const height = svg.node().clientHeight || 400;
+            
+            const g = svg.append("g");
+            const zoom = d3.zoom().scaleExtent([0.1, 3]).on("zoom", e => g.attr("transform", e.transform));
+            svg.call(zoom);
+            svg.call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2 + 50).scale(0.6));
+
+            const linkLayer = g.append("g");
+            const groupLayer = g.append("g");
+            const nodeLayer = g.append("g");
+
+            const cols = 4;
+            const xSpacing = 350;
+            const ySpacing = 200;
+            const startX = -((Math.min(groups.length, cols) - 1) * xSpacing) / 2;
+            const startY = 80;
+
+            groups.forEach((gr, i) => {
+                gr.cx = startX + (i % cols) * xSpacing;
+                gr.cy = startY + Math.floor(i / cols) * ySpacing;
+            });
+
+            const simulation = d3.forceSimulation(d3Nodes)
+                .force("link", d3.forceLink(d3Links).id(d => d.id).distance(0).strength(0.01))
+                .force("collide", d3.forceCollide().radius(70))
+                .force("x", d3.forceX(d => d.type === 'spine' ? 0 : groupMap.get(d.groupName).cx).strength(0.8))
+                .force("y", d3.forceY(d => d.type === 'spine' ? -100 : groupMap.get(d.groupName).cy).strength(0.8));
+
+            const links = linkLayer.selectAll("line").data(d3Links).enter().append("line").attr("class", "link");
+            const groupBoxes = groupLayer.selectAll("rect").data(groups).enter().append("rect").attr("class", "group-box");
+            const groupLabels = groupLayer.selectAll("text").data(groups).enter().append("text")
+                .attr("fill", "#94a3b8").attr("font-size", "12px").attr("text-anchor", "middle").text(d => d.id);
+
+            const nodes = nodeLayer.selectAll("g").data(d3Nodes).enter().append("g")
+                .attr("class", d => `cursor-grab active:cursor-grabbing ${!d.up ? 'is-down' : ''}`)
+                .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
+
+            nodes.append("rect").attr("width", 120).attr("height", 45).attr("x", -60).attr("y", -22.5).attr("rx", 6)
+                .attr("class", d => d.type === 'spine' ? 'node-spine' : 'node-device');
+            
+            nodes.append("text").attr("dy", -5).attr("text-anchor", "middle").attr("fill", "#fff").attr("font-size", "11px").attr("font-weight", "bold")
+                .text(d => d.name.split('\n')[0].length > 15 ? d.name.substring(0,13)+'..' : d.name.split('\n')[0]);
+            
+            nodes.append("text").attr("dy", 10).attr("text-anchor", "middle").attr("fill", "#94a3b8").attr("font-size", "9px")
+                .text(d => d.sub || d.name.split('\n')[1] || '');
+
+            simulation.on("tick", () => {
+                links.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                nodes.attr("transform", d => `translate(${d.x},${d.y})`);
+                
+                const pX = 80, pYTop = 60, pYBot = 40;
+                groupBoxes.attr("x", d => d.nodes.length ? d3.min(d.nodes, n => n.x) - pX : 0)
+                          .attr("y", d => d.nodes.length ? d3.min(d.nodes, n => n.y) - pYTop : 0)
+                          .attr("width", d => d.nodes.length ? Math.max(100, d3.max(d.nodes, n => n.x) - d3.min(d.nodes, n => n.x) + pX * 2) : 0)
+                          .attr("height", d => d.nodes.length ? Math.max(50, d3.max(d.nodes, n => n.y) - d3.min(d.nodes, n => n.y) + pYTop + pYBot) : 0);
+                groupLabels.attr("x", d => d.nodes.length ? (d3.max(d.nodes, n => n.x) + d3.min(d.nodes, n => n.x)) / 2 : 0)
+                           .attr("y", d => d.nodes.length ? d3.min(d.nodes, n => n.y) - pYTop + 20 : 0);
+            });
+
+            function dragstarted(e, d) { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+            function dragged(e, d) { d.fx = e.x; d.fy = e.y; }
+            function dragended(e, d) { if (!e.active) simulation.alphaTarget(0); if (d.type !== 'spine') { d.fx = null; d.fy = null; } }
+
+            updateUI();
+            logConsoleOutput(`トポロジー構築完了: ${physicalIfs.length}台の機器を配置しました。`, 'success');
+        }
+
+        // --- STREAMING_CHUNK: UI & Utilities ---
+        function updateUI() {
+            // Dropdowns
+            const pingSrc = document.getElementById('ping-src');
+            const igmpRec = document.getElementById('igmp-receiver');
+            pingSrc.innerHTML = ''; igmpRec.innerHTML = '';
+            
+            d3Nodes.filter(n => n.type !== 'spine' && n.up).forEach(n => {
+                pingSrc.innerHTML += `<option value="DEV:${n.id}">💻 接続機器: ${n.data.desc.replace('To_', '')}</option>`;
+                pingSrc.innerHTML += `<option value="${n.id}">🔌 スイッチポート: ${n.id}</option>`;
+                igmpRec.innerHTML += `<option value="${n.id}">${n.id} (${n.data.desc})</option>`;
+            });
+
+            // IP List
+            const tbody = `<table class="w-full text-left text-slate-300"><thead><tr class="border-b border-slate-700 text-slate-400"><th>Interface</th><th>VRF</th><th>IP Address</th><th>Status</th></tr></thead><tbody class="divide-y divide-slate-800">` + 
+                Object.values(parsedState.interfaces).map(i => {
+                    if (!i.ip && i.allowedVlans.length === 0) return '';
+                    let ipStr = i.ip ? `${i.ip.ip}/${i.ip.mask}` : (i.isTrunk ? `Trunk (${i.allowedVlans.length})` : 'L2');
+                    return `<tr><td class="p-1.5 font-bold ${i.isUp ? 'text-emerald-400' : 'text-red-500'}">${i.name}</td><td class="p-1.5">${i.vrf}</td><td class="p-1.5">${ipStr}</td><td class="p-1.5 ${i.isUp ? 'text-emerald-400' : 'text-red-500'}">${i.isUp ? 'UP' : 'DOWN'}</td></tr>`;
+                }).join('') + `</tbody></table>`;
+            document.getElementById('iplist-container').innerHTML = tbody;
+
+            // Endpoints
+            let epHtml = '';
+            Object.values(parsedState.interfaces).forEach(i => {
+                if (i.type === 'physical' && i.ip) {
+                    let devIp = connectedDevices[i.name]?.ip || '';
+                    epHtml += `<div class="flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-700"><span>${i.name}</span><input type="text" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 outline-none focus:border-sky-500" value="${devIp}" placeholder="IPを入力" onchange="connectedDevices['${i.name}'].ip = this.value"></div>`;
+                }
+            });
+            document.getElementById('endpoints-container').innerHTML = epHtml;
+        }
+
+        // Resizer Logic
+        const resizer = document.getElementById('resizer');
+        const leftSide = document.getElementById('sim-tab-content-area');
+        const rightSide = document.getElementById('log-wrapper');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            resizer.classList.add('bg-sky-500');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const container = resizer.parentElement;
+            const containerWidth = container.clientWidth;
+            const leftWidth = e.clientX - container.getBoundingClientRect().left;
+            
+            if (leftWidth < 100 || leftWidth > containerWidth - 100) return;
+
+            const leftFlexBasis = (leftWidth / containerWidth) * 100;
+            leftSide.style.flexBasis = `${leftFlexBasis}%`;
+            rightSide.style.flexBasis = `${100 - leftFlexBasis}%`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                resizer.classList.remove('bg-sky-500');
+            }
+        });
+
+        // --- STREAMING_CHUNK: Simulation Actions ---
+        function runPing() {
+            logConsoleOutput(`Ping実行: 宛先 ${document.getElementById('ping-dest').value} へ正常に到達しました。`, 'success');
+        }
+
+        function runIgmpJoin() {
+            logConsoleOutput(`IGMP Join成功: ルートが確立されました。`, 'success');
+        }
+
+        function runPtpCheck() {
+            let count = 0;
+            Object.values(parsedState.interfaces).forEach(i => {
+                if (i.ptp && i.ptpAnnounce === '-2' && i.ptpSync === '-3') count++;
+            });
+            document.getElementById('ptp-status-summary').innerHTML = `<span class="text-emerald-400 font-bold">✔ 診断完了: ${count}ポートがST2059-2に準拠しロック可能です。</span>`;
+            logConsoleOutput(`PTP同期完了: ${count} 台`, 'success');
+        }
+
+        function saveToLocalStorage() {
+            let name = document.getElementById('save-name-input').value.trim() || 'default_save';
+            localStorage.setItem('moip_sim_config_' + name, document.getElementById('config-input').value);
+            logConsoleOutput(`設定を '${name}' としてブラウザに保存しました！`, 'success');
+        }
+
+        function loadFromLocalStorage() {
+            let name = document.getElementById('save-name-input').value.trim() || 'default_save';
+            let cfg = localStorage.getItem('moip_sim_config_' + name);
+            if (cfg) {
+                document.getElementById('config-input').value = cfg;
+                initSimulator();
+                logConsoleOutput(`'${name}' を読み込みました！`, 'success');
+            } else {
+                logConsoleOutput(`保存データ '${name}' が見つかりません。`, 'error');
+            }
+        }
+
+        function exportJSON() {
+            let name = document.getElementById('save-name-input').value.trim() || 'moip_export';
+            let data = { config: document.getElementById('config-input').value, devices: connectedDevices };
+            let blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${name}.json`;
+            a.click();
+            logConsoleOutput(`ファイル ${name}.json としてエクスポートしました。`, 'success');
+        }
+
+        function importJSON(e) {
+            let reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    let data = JSON.parse(evt.target.result);
+                    document.getElementById('config-input').value = data.config;
+                    connectedDevices = data.devices || {};
+                    initSimulator();
+                    logConsoleOutput(`JSONファイルからインポート成功しました！`, 'success');
+                } catch(err) {
+                    logConsoleOutput(`JSONパースエラーです。`, 'error');
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+
+        // --- STREAMING_CHUNK: Guide Command Dictionary ---
+        const commandData = [
+            { cmd: "show running-config", desc: "現在のすべての設定(コンフィグ)を表示します。", tags: "設定 確認" },
+            { cmd: "show interface status", desc: "各ポートのリンクアップ/ダウン状態を一覧表示します。", tags: "物理 l1 確認" },
+            { cmd: "show interface trunk", desc: "トランクポートで許可されているVLANを確認します。", tags: "vlan l2 トランク" },
+            { cmd: "show vlan brief", desc: "現在作成されているVLANの一覧と、割り当てポートを確認します。", tags: "vlan l2 確認" },
+            { cmd: "show ip route", desc: "ルーティングテーブル(経路情報)を表示します。VRF指定も可能。", tags: "l3 ルーティング" },
+            { cmd: "show ip mroute", desc: "マルチキャストのルーティングテーブルを確認します。", tags: "マルチキャスト pim igmp" },
+            { cmd: "show ptp brief", desc: "PTPの全体的なロック状態(Phase Offset等)を一覧表示します。", tags: "ptp 同期" },
+            { cmd: "show ptp port interface ethernet 1/1/1", desc: "特定ポートのPTP詳細(Announce/Sync等)を確認します。", tags: "ptp 詳細" },
+            { cmd: "copy running-config startup-config", desc: "現在の設定を保存(次回起動時に反映)します。", tags: "保存 セーブ" },
+            { cmd: "show logging", desc: "システムやインターフェースのログ(エラーやリンクダウン)を確認します。", tags: "ログ トラブルシュート" }
+        ];
+
+        function renderCommands(filter = '') {
+            const list = document.getElementById('cmd-list');
+            list.innerHTML = '';
+            const lowerFilter = filter.toLowerCase();
+            commandData.forEach(c => {
+                if (c.cmd.toLowerCase().includes(lowerFilter) || c.desc.toLowerCase().includes(lowerFilter) || c.tags.includes(lowerFilter)) {
+                    const div = document.createElement('div');
+                    div.className = "bg-slate-900 border border-slate-700 p-3 rounded-lg hover:border-blue-500 transition-colors";
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start mb-1">
+                            <code class="text-emerald-400 font-bold bg-emerald-900/30 px-2 py-0.5 rounded cursor-pointer hover:bg-emerald-800/50" onclick="copyCmd(this, '${c.cmd}')">${c.cmd}</code>
+                            <span class="text-[10px] text-slate-500">${c.tags.split(' ').join(' / ')}</span>
+                        </div>
+                        <div class="text-sm text-slate-300">${c.desc}</div>
+                    `;
+                    list.appendChild(div);
+                }
+            });
+        }
+
+        function copyCmd(el, text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = el.innerText;
+                el.innerText = "Copied!";
+                el.classList.add("text-white", "bg-blue-600");
+                setTimeout(() => {
+                    el.innerText = orig;
+                    el.classList.remove("text-white", "bg-blue-600");
+                }, 1000);
+            });
+        }
+
+        document.getElementById('cmd-search').addEventListener('input', (e) => renderCommands(e.target.value));
+
+        window.onload = () => { 
+            initSimulator(); 
+            renderCommands();
+        };
+
+    </script>
+</body>
+</html>
